@@ -24,7 +24,7 @@ sys_getpid(void)
 uint64
 sys_fork(void)
 {
-  return c();
+  return fork();
 }
 
 uint64
