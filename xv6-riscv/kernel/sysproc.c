@@ -96,10 +96,20 @@ sys_ps(void)
   // EEE3535-01 Operating Systems
   // Assignment 1: Process and System Call
 
-  int n;
-  argint(0, &n);
-  printf("%d\n",n);
-  printf("%d\n",n++);
+  int arg0, arg1, arg2, arg3, arg4, arg5;
+  argint(0, &arg0);
+  argint(1, &arg1);
+  argint(2, &arg2);
+  argint(3, &arg3);
+  argint(4, &arg4);
+  argint(5, &arg5);
+
+  printf("arg0: %d\n",arg0);
+  printf("arg1: %d\n",arg1);
+  printf("arg2: %d\n",arg2);
+  printf("arg3: %d\n",arg3);
+  printf("arg4: %d\n",arg4);
+  printf("arg5: %d\n",arg5);
 
 //  proc proc[NPROC]; <- cycle through
 //  "PID\tState\tRuntime\tName"
