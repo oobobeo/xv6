@@ -11,16 +11,13 @@ void print_help(int argc, char **argv) {
              argv[0], argc > 7 ? ": too many args" : "");
 }
 
+// return 1 if input is numeric
 int isdigit(char a) {
   return (a >= '0') && (a <= '9');
 }
 
+// return 1 if input is numeric or alphabetic
 int isalnum(char a) {
-//  printf("isalnum func: \n");
-//  printf("char: %c\n", a);
-//  printf("char to hex: %x\n", a);
-//  printf("%d, %d, %d\n", isdigit(a), ((a >= 'a') && (a <= 'z')), ((a >= 'A') && (a <= 'Z')));
-//  printf("return %d\n", isdigit(a) || ((a >= 'a') && (a <= 'z')) || ((a >= 'A') && (a <= 'Z')));
   return isdigit(a) || ((a >= 'a') && (a <= 'z')) || ((a >= 'A') && (a <= 'Z'));
 }
 
@@ -38,30 +35,20 @@ int main(int argc, char **argv) {
      so technically no arguments are passed to the ps() syscall. */
 
 
-  for (int i=0; i<argc; i++) {
-//    printf("---------\n");
-//    printf("%s\n", argv[i]);
-//    printf("---------\n");
-  }
-
-
-
   // Call the ps() syscall.
 
   // assert stuff
   // convert to int and assign to "args"
   for (int i=1; i<argc; i++) {
 
+    // convert to 0 if any of the character is not numeric, except null
     int digit_check = 1;
-    for (int j=0;;j++){
 
-//      printf("!isalnum(argv[i][j]): %d\n", !isalnum(argv[i][j]));
-//      printf("(argv[i][j] == '\\0'): %d\n", (argv[i][j] == '\0'));
+    // loop through all character of each input
+    for (int j=0;;j++){
+      // character is neither alphanumeric or null
       if (!(isalnum(argv[i][j]) || (argv[i][j] == '\0'))) {
         print_help(argc, argv);
-//        printf("$$$$\n");
-//        printf("%c\n",argv[i][j]);
-//        printf("111111\n");
         exit(1);
       }
       digit_check = digit_check && (isdigit(argv[i][j]) || (argv[i][j] == '\0'));
@@ -71,7 +58,6 @@ int main(int argc, char **argv) {
         if (j <= 1) {
           // integer or null
           if (digit_check) {
-//            printf("THIS IS DIGIT\n");
             args[i] = atoi(&argv[i][0]);
           }
           // alphabet
@@ -93,15 +79,10 @@ int main(int argc, char **argv) {
                 args[i] = 0;
                 break;
               default:
-
                 print_help(argc, argv);
-//                printf("222222\n");
-//                printf("argv[i][0]: %x\n", argv[i][0]);
-//                printf("argv[i][0]: %c\n", argv[i][0]);
                 exit(1);
                 break;
-          }
-
+            }
           }
           break;
         }
@@ -111,7 +92,6 @@ int main(int argc, char **argv) {
             break;
           }
           print_help(argc, argv);
-//          printf("333333\n");
           exit(1);
         }
       }
@@ -119,13 +99,6 @@ int main(int argc, char **argv) {
   }
 
   // call sys_ps
-//  printf("args[0]: %d\n", args[0]);
-//  printf("args[1]: %d\n", args[1]);
-//  printf("args[2]: %d\n", args[2]);
-//  printf("args[3]: %d\n", args[3]);
-//  printf("args[4]: %d\n", args[4]);
-//  printf("args[5]: %d\n", args[5]);
-//  printf("--------------------\n");
   int ret = ps(args[0], args[1], args[2], args[3], args[4], args[5]);
   if(ret) { fprintf(2, "ps failed\n"); exit(1); }
 
