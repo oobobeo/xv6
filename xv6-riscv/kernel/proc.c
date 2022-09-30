@@ -125,6 +125,9 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  // process starttime
+  p->starttime = ticks;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);

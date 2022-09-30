@@ -96,23 +96,64 @@ sys_ps(void)
   // EEE3535-01 Operating Systems
   // Assignment 1: Process and System Call
 
-  int arg0, arg1, arg2, arg3, arg4, arg5;
-  argint(0, &arg0);
-  argint(1, &arg1);
-  argint(2, &arg2);
-  argint(3, &arg3);
-  argint(4, &arg4);
-  argint(5, &arg5);
+  int args[6];
+  for (int i=0; i<6; i++) {
+    argint(i, &args[i]);
+  }
 
-  printf("arg0: %d\n",arg0);
-  printf("arg1: %d\n",arg1);
-  printf("arg2: %d\n",arg2);
-  printf("arg3: %d\n",arg3);
-  printf("arg4: %d\n",arg4);
-  printf("arg5: %d\n",arg5);
+  printf("PID\tState\tRuntime\tName\n");
 
-//  proc proc[NPROC]; <- cycle through
-//  "PID\tState\tRuntime\tName"
+  //  proc proc[NPROC]; <- cycle through
+  // X(RUNNING):-4 | S(SLEEPING):-2 | R(RUNNABLE):-3 | Z(ZOMBIE):-5
+  // proc.state: 4 -> X | 3 -> R | 2 -> S | 5 -> Z
+
+
+  for (int i=0; i<NPROC; i++) {
+
+    char state[] = "0";
+    switch (proc->state) {
+      case 2:
+        state[0] = 'S';
+        break;
+      case 3:
+        state[0] = 'R';
+        break;
+      case 4:
+        state[0] = 'X';
+        break;
+      case 5:
+        state[0] = 'Z';
+        break;
+      default:
+        state[0] = '0';
+        break;
+    }
+    // filter process
+    int match = 0;
+    int pid = proc[i].pid;
+    for (int i=0; i<6; i++) {
+      // if no input args -> print all
+      if ((args[0] == 0) && (pid != 0)) {
+        match = 1;
+      }
+      if ((pid == args[i]) && (pid != 0)) {
+        match = 1;
+        break;
+      }
+      if ((proc->state == (-1*args[i])) && (pid != 0)) {
+        match = 1;
+        break;
+      }
+    }
+
+    // print out process info
+    if (!match) continue;
+    int runtime = ticks - proc[i].starttime;
+    int sec = (runtime / 10) % 60;
+    int sec_d = runtime % 10;
+    int min = runtime / 600;
+    printf("%d\t%s\t%d:%d.%d\t%s\n", pid, state, min, sec, sec_d, proc[i].name);
+  }
 
   //error -> return non-zero
   return 0;

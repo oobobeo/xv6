@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
           else {
             switch (argv[i][0]) {
               case 'X':
-                args[i] = -1;
+                args[i] = -4;
                 break;
               case 'S':
                 args[i] = -2;
@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
                 args[i] = -3;
                 break;
               case 'Z':
-                args[i] = -4;
+                args[i] = -5;
                 break;
               case '\0':
                 args[i] = 0;
