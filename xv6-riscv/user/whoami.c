@@ -8,4 +8,3 @@ int main(int argc, char **argv) {
     printf("Student name: %s\n", sname);
     exit(0);
 }
-
