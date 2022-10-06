@@ -16,7 +16,7 @@ int main(void) {
 //  int args[max_args];
 //  memset(args, 0, max_args * sizeof(int));
 
-  printf("ayy");
+  printf("ayy\n");
 
   // call sys_ps
   gettime();

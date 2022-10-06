@@ -97,7 +97,7 @@ sys_gettime(void)
 
 
 
-printf("yo what up");
+printf("yo what up\n");
 
 
 
