@@ -89,3 +89,17 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_gettime(void)
+{
+
+
+
+
+printf("yo what up");
+
+
+
+return 0;
+}

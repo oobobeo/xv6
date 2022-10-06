@@ -105,3 +105,8 @@ uptime:
  li a7, SYS_uptime
  ecall
  ret
+.global gettime
+gettime:
+ li a7, SYS_gettime
+ ecall
+ ret
