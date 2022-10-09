@@ -93,13 +93,33 @@ sys_uptime(void)
 uint64
 sys_gettime(void)
 {
+  printf("\nsys_gettime: START\n");
+
+  // has info of parent proc
+
+  // loop through proc
+  // if proc->parent = parent
+  // then count time
+
+//  int real_time = 0;
+//  int user_time = 0;;
+//  int sys_time  = 0;
+  int pid = sys_getpid();
+//  struct spinlock wait_lock;
+  for (struct proc* p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+//    printf("pid: %d, ppid: %d, name: %s, state: %d | %d:%d\n", p->pid, p->parent_pid, p->name, p->state, p->created_at, p->deleted_at);
+
+    if (p->parent_pid == pid) {
+      printf("real: %d\n", p->deleted_at - p->created_at);
+
+    }
+    release(&p->lock);
+
+  }
 
 
 
-
-printf("yo what up\n");
-
-
-
-return 0;
+  printf("sys_gettime: END\n\n");
+  return 0;
 }

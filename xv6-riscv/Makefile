@@ -134,7 +134,6 @@ UPROGS=\
 	$U/_wc\
 	$U/_whoami\
 	$U/_zombie\
-	$U/_time\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)

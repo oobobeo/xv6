@@ -92,6 +92,14 @@ struct proc {
   int xstate;                  // Exit status to be returned to parent's wait
   int pid;                     // Process ID
 
+  // sys_gettime related variables
+  int parent_pid;              // persistant
+  int created_at;              // timestamp of the deleted moment
+  int deleted_at;              // timestamp of the deleted moment
+  int user_time;               // time spent by user
+  int sys_time;                // time spent by system
+
+
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process
 
@@ -105,3 +113,5 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 };
+
+extern struct proc proc[NPROC];

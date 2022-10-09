@@ -125,6 +125,10 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  // process start time
+  p->created_at = ticks;
+  p->parent_pid = 0;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -316,6 +320,8 @@ fork(void)
 
   acquire(&wait_lock);
   np->parent = p;
+  // set parent_pid
+  np->parent_pid = p->pid;
   release(&wait_lock);
 
   acquire(&np->lock);
@@ -346,6 +352,7 @@ reparent(struct proc *p)
 void
 exit(int status)
 {
+  printf("\nexit: START\n");
   struct proc *p = myproc();
 
   if(p == initproc)
@@ -377,6 +384,10 @@ exit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
+  printf("p->state: %d\n",p->state);
+
+  // process end time
+  p->deleted_at = ticks;
 
   release(&wait_lock);
 
