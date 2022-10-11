@@ -125,14 +125,11 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
-  // time info
+  // init time info
   p->created_at = ticks;
   p->real_time = 0;
   p->user_time = 0;
   p->sys_time = 0;
-
-
-  p->parent_pid = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -325,8 +322,6 @@ fork(void)
 
   acquire(&wait_lock);
   np->parent = p;
-  // set parent_pid
-  np->parent_pid = p->pid;
   release(&wait_lock);
 
   acquire(&np->lock);
@@ -357,7 +352,6 @@ reparent(struct proc *p)
 void
 exit(int status)
 {
-  printf("\nexit: START\n");
   struct proc *p = myproc();
 
   if(p == initproc)
@@ -389,7 +383,6 @@ exit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
-  printf("p->state: %d\n",p->state);
 
   // process end time
   p->real_time = ticks - p->created_at;
@@ -430,11 +423,6 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
-
-          // p = sh (pid=2)
-//          printf("wait | p(%d): %s, pp(%d): %s\n", p->pid, p->name, pp->pid, pp->name);
-//          printf("p->real_time: %d\n\n", p->real_time);
-
 
           // aggregate all child process's time_info to parent's time_info
           p->real_time += pp->real_time;
@@ -483,7 +471,7 @@ scheduler(void)
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
 
-        // kernel time
+        // start of kernel time
         p->sys_start_time = ticks;
 
         // Switch to chosen process.  It is the process's job
@@ -566,9 +554,9 @@ forkret(void)
 void
 sleep(void *chan, struct spinlock *lk)
 {
+  // end of kernel time
   struct proc *p = myproc();
   p->sys_time += (ticks - p->sys_start_time);
-//  printf("S: ticks: %d\t| start: %d\t | total: %d\n", ticks, p->sys_start_time, p->sys_time);
 
   // Must acquire p->lock in order to
   // change p->state and then call sched.

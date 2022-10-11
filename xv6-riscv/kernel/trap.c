@@ -81,8 +81,8 @@ usertrap(void)
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2) {
+    // assume user mode took a whole tick
     p->user_time += 1;
-
     yield();
   }
 
@@ -128,9 +128,8 @@ usertrapret(void)
   // tell trampoline.S the user page table to switch to.
   uint64 satp = MAKE_SATP(p->pagetable);
 
-  // kernel time
+  // end of kernel time
   p->sys_time += (ticks - p->sys_start_time);
-//  printf("R: ticks: %d\t| start: %d\t | total: %d\n", ticks, p->sys_start_time, p->sys_time);
 
   // jump to userret in trampoline.S at the top of memory, which 
   // switches to the user page table, restores user registers,
@@ -163,9 +162,8 @@ kerneltrap()
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING) {
     struct proc *p = myproc();
-    // sys time end
+    // end of kernel time
     p->sys_time += (ticks - p->sys_start_time);
-//    printf("\nY: ticks: %d\t| start: %d\t | total: %d\n", ticks, p->sys_start_time, p->sys_time);
 
     yield();
   }

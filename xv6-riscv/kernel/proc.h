@@ -101,9 +101,6 @@ struct proc {
   int user_time;               // time spent by user
   int sys_time;                // time spent by system
 
-  int parent_pid;              // persistent <DONT USE>
-
-
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process
 

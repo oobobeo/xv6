@@ -100,8 +100,8 @@ sys_gettime(void)
   int u = p->user_time;
   int s = p->sys_time;
 
-  // 0m0.00s
-  int r_s2 = (r%100); // 10ms = 0.01s (1)
+  // format: 0m0.00s
+  int r_s2 = (r%100); // 10ms = 0.01s (1tick)
   int r_s1 = (r/100) % 60;
   int r_m = r/6000;
 
@@ -144,7 +144,7 @@ sys_gettime(void)
     s_s2_c[1] = '0' + (s_s2 % 10);
   }
 
-//  printf("%d %d %d\n",r,u,s);
+  // std output
   printf("real: %dm%d.%ss\n", r_m, r_s1, r_s2_c);
   printf("user: %dm%d.%ss\n", u_m, u_s1, u_s2_c);
   printf("sys:  %dm%d.%ss\n", s_m, s_s1, s_s2_c);
