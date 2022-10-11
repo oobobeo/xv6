@@ -125,8 +125,13 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
-  // process start time
+  // time info
   p->created_at = ticks;
+  p->real_time = 0;
+  p->user_time = 0;
+  p->sys_time = 0;
+
+
   p->parent_pid = 0;
 
   // Allocate a trapframe page.
@@ -387,7 +392,7 @@ exit(int status)
   printf("p->state: %d\n",p->state);
 
   // process end time
-  p->deleted_at = ticks;
+  p->real_time = ticks - p->created_at;
 
   release(&wait_lock);
 
@@ -425,6 +430,17 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
+
+          // p = sh (pid=2)
+//          printf("wait | p(%d): %s, pp(%d): %s\n", p->pid, p->name, pp->pid, pp->name);
+//          printf("p->real_time: %d\n\n", p->real_time);
+
+
+          // aggregate all child process's time_info to parent's time_info
+          p->real_time += pp->real_time;
+          p->user_time += pp->user_time;
+          p->sys_time += pp->sys_time;
+
           freeproc(pp);
           release(&pp->lock);
           release(&wait_lock);
@@ -466,6 +482,10 @@ scheduler(void)
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
+
+        // kernel time
+        p->sys_start_time = ticks;
+
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
@@ -547,7 +567,9 @@ void
 sleep(void *chan, struct spinlock *lk)
 {
   struct proc *p = myproc();
-  
+  p->sys_time += (ticks - p->sys_start_time);
+//  printf("S: ticks: %d\t| start: %d\t | total: %d\n", ticks, p->sys_start_time, p->sys_time);
+
   // Must acquire p->lock in order to
   // change p->state and then call sched.
   // Once we hold p->lock, we can be

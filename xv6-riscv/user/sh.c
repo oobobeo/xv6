@@ -171,23 +171,35 @@ main(void)
       printf("time command: \n");
 
 
-      // fork child process
+      // fork child -> grandchild
       // child executes the trailling command after "time "
       // call "gettime()" to measure execution time
-      int rc = fork1();
-      if(rc == 0) { // current process is child process
-        printf("child: start\n");
-        runcmd(parsecmd(buf+5));
-        printf("child: ran command\n");
+      int rc1 = fork1(); // sh: pid
+//      printf("fork: rc1 = %d\n", rc1);
+      if(rc1 == 0) { // current process is child process
+//        printf("child: start\n");
+        int rc2 = fork1();
+//        printf("fork: rc2 = %d\n", rc2);
+        if (rc2 == 0) { // current process is grandchild process
+//          printf("grandchild: start\n");
+          runcmd(parsecmd(buf+5));
+//          printf("grandchild: runcmd\n");
+        }
+        else { // current process is child process
+//          int grandchild_pid = wait(0);
+          wait(0);
+//          printf("grandchild_pid: %d\n", grandchild_pid);
+
+          gettime();
+        }
+//        printf("child: end\n");
       }
-      else if (rc > 0) { // current process is parent process
-        printf("parent: start\n");
-        int child_pid = wait(0); // all child processes are finished
-        printf("child_pid: %d\n", child_pid);
-        printf("parent: child processes done\n");
-        gettime();
-
-
+      else { // current process is sh
+//        printf("parent: start\n");
+//        int child_pid = wait(0); // all child processes are finished
+        wait(0);
+//        printf("child_pid: %d\n", child_pid);
+//        printf("parent: child processes done\n");
       }
 
       continue;

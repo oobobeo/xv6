@@ -93,33 +93,61 @@ sys_uptime(void)
 uint64
 sys_gettime(void)
 {
-  printf("\nsys_gettime: START\n");
+  struct proc *p = myproc();
 
-  // has info of parent proc
+  // ms
+  int r = p->real_time;
+  int u = p->user_time;
+  int s = p->sys_time;
 
-  // loop through proc
-  // if proc->parent = parent
-  // then count time
+  // 0m0.00s
+  int r_s2 = (r%100); // 10ms = 0.01s (1)
+  int r_s1 = (r/100) % 60;
+  int r_m = r/6000;
 
-//  int real_time = 0;
-//  int user_time = 0;;
-//  int sys_time  = 0;
-  int pid = sys_getpid();
-//  struct spinlock wait_lock;
-  for (struct proc* p = proc; p < &proc[NPROC]; p++) {
-    acquire(&p->lock);
-//    printf("pid: %d, ppid: %d, name: %s, state: %d | %d:%d\n", p->pid, p->parent_pid, p->name, p->state, p->created_at, p->deleted_at);
+  int u_s2 = (u%100);
+  int u_s1 = (u/100) % 60;
+  int u_m = u/6000;
 
-    if (p->parent_pid == pid) {
-      printf("real: %d\n", p->deleted_at - p->created_at);
+  int s_s2 = (s%100);
+  int s_s1 = (s/100) % 60;
+  int s_m = s/6000;
 
-    }
-    release(&p->lock);
+  char r_s2_c[] = "00";
+  char u_s2_c[] = "00";
+  char s_s2_c[] = "00";
 
+  if (r_s2 <= 9) {
+    r_s2_c[0] = '0';
+    r_s2_c[1] = '0' + r_s2;
+  }
+  else {
+    r_s2_c[0] = '0' + (r_s2 / 10);
+    r_s2_c[1] = '0' + (r_s2 % 10);
   }
 
+  if (u_s2 <= 9) {
+    u_s2_c[0] = '0';
+    u_s2_c[1] = '0' + u_s2;
+  }
+  else {
+    u_s2_c[0] = '0' + (u_s2 / 10);
+    u_s2_c[1] = '0' + (u_s2 % 10);
+  }
 
+  if (s_s2 <= 9) {
+    s_s2_c[0] = '0';
+    s_s2_c[1] = '0' + s_s2;
+  }
+  else {
+    s_s2_c[0] = '0' + (s_s2 / 10);
+    s_s2_c[1] = '0' + (s_s2 % 10);
+  }
 
-  printf("sys_gettime: END\n\n");
+//  printf("%d %d %d\n",r,u,s);
+  printf("real: %dm%d.%ss\n", r_m, r_s1, r_s2_c);
+  printf("user: %dm%d.%ss\n", u_m, u_s1, u_s2_c);
+  printf("sys:  %dm%d.%ss\n", s_m, s_s1, s_s2_c);
+
   return 0;
 }

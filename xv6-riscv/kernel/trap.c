@@ -46,6 +46,9 @@ usertrap(void)
   w_stvec((uint64)kernelvec);
 
   struct proc *p = myproc();
+
+  // sys time start
+  p->sys_start_time = ticks;
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
@@ -77,8 +80,11 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2) {
+    p->user_time += 1;
+
     yield();
+  }
 
   usertrapret();
 }
@@ -122,6 +128,10 @@ usertrapret(void)
   // tell trampoline.S the user page table to switch to.
   uint64 satp = MAKE_SATP(p->pagetable);
 
+  // kernel time
+  p->sys_time += (ticks - p->sys_start_time);
+//  printf("R: ticks: %d\t| start: %d\t | total: %d\n", ticks, p->sys_start_time, p->sys_time);
+
   // jump to userret in trampoline.S at the top of memory, which 
   // switches to the user page table, restores user registers,
   // and switches to user mode with sret.
@@ -151,8 +161,14 @@ kerneltrap()
   }
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
+  if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING) {
+    struct proc *p = myproc();
+    // sys time end
+    p->sys_time += (ticks - p->sys_start_time);
+//    printf("\nY: ticks: %d\t| start: %d\t | total: %d\n", ticks, p->sys_start_time, p->sys_time);
+
     yield();
+  }
 
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.
