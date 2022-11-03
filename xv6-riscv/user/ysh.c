@@ -8,6 +8,7 @@
 int runcmd(char *cmd);      // Run a command.
 
 // Read a shell input.
+// DO NOT MODIFY
 char* readcmd(char *buf) {
     // Read an input from stdin.
     fprintf(1, "$ ");
@@ -20,6 +21,7 @@ char* readcmd(char *buf) {
     return cmd;
 }
 
+// DO NOT MODIFY
 int main(int argc, char **argv) {
     int fd = 0;
     char *cmd = 0;
