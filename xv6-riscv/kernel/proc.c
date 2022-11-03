@@ -125,12 +125,6 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
-  // init time info
-  p->created_at = ticks;
-  p->real_time = 0;
-  p->user_time = 0;
-  p->sys_time = 0;
-
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -384,9 +378,6 @@ exit(int status)
   p->xstate = status;
   p->state = ZOMBIE;
 
-  // process end time
-  p->real_time = ticks - p->created_at;
-
   release(&wait_lock);
 
   // Jump into the scheduler, never to return.
@@ -423,12 +414,6 @@ wait(uint64 addr)
             release(&wait_lock);
             return -1;
           }
-
-          // aggregate all child process's time_info to parent's time_info
-          p->real_time += pp->real_time;
-          p->user_time += pp->user_time;
-          p->sys_time += pp->sys_time;
-
           freeproc(pp);
           release(&pp->lock);
           release(&wait_lock);
@@ -470,10 +455,6 @@ scheduler(void)
     for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
-
-        // start of kernel time
-        p->sys_start_time = ticks;
-
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
@@ -554,10 +535,8 @@ forkret(void)
 void
 sleep(void *chan, struct spinlock *lk)
 {
-  // end of kernel time
   struct proc *p = myproc();
-  p->sys_time += (ticks - p->sys_start_time);
-
+  
   // Must acquire p->lock in order to
   // change p->state and then call sched.
   // Once we hold p->lock, we can be

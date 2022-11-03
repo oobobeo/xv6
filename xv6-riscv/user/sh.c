@@ -158,7 +158,6 @@ main(void)
 
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
-    // reserved keyword "cd"
     if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
       // Chdir must be called by the parent, not the child.
       buf[strlen(buf)-1] = 0;  // chop \n
@@ -166,34 +165,8 @@ main(void)
         fprintf(2, "cannot cd %s\n", buf+3);
       continue;
     }
-
-    // reserved keyword "time"
-    if(buf[0] == 't' && buf[1] == 'i' && buf[2] == 'm' && buf[3] == 'e' && buf[4] == ' '){
-
-      // fork child -> grandchild in sh
-      // grandchild executes the trailing command after "time "
-      // use child process to aggregate time info of the trailing command by
-      // calling "gettime()" in child to measure execution time
-
-      int rc1 = fork1(); // sh: pid
-      if(rc1 == 0) { // current process is child process
-        int rc2 = fork1();
-        if (rc2 == 0) { // current process is grandchild process
-          runcmd(parsecmd(buf+5));
-        }
-        else { // current process is child process
-          wait(0);
-          gettime();
-        }
-      }
-      else { // current process is sh
-        wait(0); // all child processes are finished
-      }
-
-      continue;
-    }
-
-    if(fork1() == 0) runcmd(parsecmd(buf));
+    if(fork1() == 0)
+      runcmd(parsecmd(buf));
     wait(0);
   }
   exit(0);
