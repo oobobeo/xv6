@@ -60,33 +60,27 @@ int runcmd(char *cmd) {
     else {
         // EEE3535-01 Operating Systems
         // Assignment 3: Shell
-//        int left = 0;
-//        int right = 0;
 
         // CASE1: (&)
         if (cmd_[strlen(cmd_)-1] == '&') {
           cmd_[strlen(cmd_)-1] = 0;
           int rc1 = fork();
           if (rc1 == 0) { // child
+            // run command in seperate child process
             runcmd(cmd_);
-//            exit(0);
           }
         }
 
         // CASE2: (;)
         else if (strchr(cmd_, ';')) {
-//          printf("(;) START\n");
           char *s = strchr(cmd_, ';');
           *s = 0;
           int rc2 = fork();
-//          printf("rc2: %d\n", rc2);
-          if (rc2 > 0) { // parent
-//            printf("(;) right: %s\n", s+1);
+          if (rc2 > 0) { // parent executes right command
             wait(0);
             runcmd(s+1);
           }
-          if (rc2 == 0) { //child
-//            printf("(;) LEFT: %s\n", cmd_);
+          if (rc2 == 0) { //child executes left command
             runcmd(cmd_);
             exit(0);
           }
@@ -94,7 +88,6 @@ int runcmd(char *cmd) {
 
         // CASE3: (|)
         else if (strchr(cmd_, '|')) {
-//          printf("PIPE: %s\n", cmd_);
 
           char *p = strchr(cmd_, '|');
           *p = 0;
@@ -107,36 +100,27 @@ int runcmd(char *cmd) {
             int mypipe[2];
             pipe(mypipe);
             int rc4 = fork();
-            if (rc4 > 0) { // child
+            if (rc4 > 0) { // child stdin to pipe output
               close(0);
               dup(mypipe[0]);
               close(mypipe[0]);
               close(mypipe[1]);
-//              printf("PIPE child: (%s)\n", p+1);
               runcmd(p+1);
               exit(0);
             }
-            else if (rc4 == 0) { // grandchild
+            else if (rc4 == 0) { // grandchild stdout to pipe input
               close(1);
               dup(mypipe[1]);
               close(mypipe[0]);
               close(mypipe[1]);
-//              printf("PIPE grandchild: (%s)\n", cmd_);
               runcmd(cmd_);
               exit(0);
             }
           }
-
-
-
-
-
-
         }
 
         // CASE4: (single command)
         else {
-//          printf("SINGLE COMMAND\n");
           char *argv[10]; // MAXARGS = 10
           for (int k=0; k<10; k++) {
               argv[k] = 0;
@@ -154,19 +138,8 @@ int runcmd(char *cmd) {
             i++;
           } while (1); // ex) "ps -c -x" index=2,5 is blank
 
-          // if empty command: exit
-//          if (!argv[0]) {
-//            exit(1);
-//          }
-
-//          for (int k=0; k<10; k++) {
-//            if (argv[k]) {
-//              printf("COMMAND(%d): %s\n",k, argv[k]);
-//            }
-//          }
-//          printf("\n");
           int rc5 = fork();
-          if (rc5 == 0) {
+          if (rc5 == 0) { // execute command as a child process
             exec(argv[0], argv);
           }
           else if (rc5 > 0) {
@@ -174,6 +147,6 @@ int runcmd(char *cmd) {
           }
         }
     }
-//    printf("return 1\n");
+
     return 1;
 }
