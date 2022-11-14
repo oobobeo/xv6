@@ -89,3 +89,13 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// MLFQ stats
+uint64
+sys_mlfq(void)
+{
+  /* Assignment 4: Scheduling
+     Print MLFQ scheduling stats if the input argument is 0.
+     Reset MLFQ counter values to zeros if the input argument is 1. */
+  return 0;
+}
