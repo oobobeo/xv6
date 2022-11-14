@@ -97,5 +97,47 @@ sys_mlfq(void)
   /* Assignment 4: Scheduling
      Print MLFQ scheduling stats if the input argument is 0.
      Reset MLFQ counter values to zeros if the input argument is 1. */
+//  int arg0, arg1;
+//  argint(0, &arg0);
+//  argint(1, &arg1);
+//  if (arg1 == 0) {
+//    struct proc* p;
+//    printf("(Q3): ");
+//    p = mlfq[3];
+//    while (1) {
+//      if(!p) break;
+//      printf("%s ", p->name);
+//    }
+//    printf("\n");
+//    printf("(Q2)");
+//    p = mlfq[2];
+//    while (1) {
+//      if(!p) break;
+//      printf("%s ", p->name);
+//    }
+//    printf("\n");
+//    printf("(Q1)");
+//    p = mlfq[1];
+//    while (1) {
+//      if(!p) break;
+//      printf("%s ", p->name);
+//    }
+//    printf("\n");
+//    printf("(Q0)");
+//    p = mlfq[0];
+//    while (1) {
+//      if(!p) break;
+//      printf("%s ", p->name);
+//    }
+//    printf("\n");
+//
+//
+//  }
+
+
+
+
+
+
   return 0;
 }

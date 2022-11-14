@@ -10,6 +10,8 @@ struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 
+struct proc* mlfq[LEVELS];
+
 struct proc *initproc;
 
 int nextpid = 1;
@@ -125,6 +127,30 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  // mlfq
+  // put the new process at the front of the queue
+  struct proc* temp = mlfq[LEVELS-1];
+  if (temp) { // if not empty
+//    mlfq[LEVELS-1] = p;
+//    p->next = temp;
+
+    // at the last of queue
+    struct proc* pp=mlfq[LEVELS-1];
+    while (pp->next != 0) {
+      pp = pp->next;
+    } // pp: last in queue
+    pp->next = p;
+  }
+  else {
+    mlfq[LEVELS-1] = p;
+  }
+  printf("<allocproc> %d\n", p->pid);
+  printf("mlfq[LEVELS-1]: ");
+  for (struct proc* c=mlfq[LEVELS-1]; c!=0; c=c->next) {
+    printf("%d->", c->pid);
+  }
+  printf("\n");
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -146,6 +172,7 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  printf("<allocproc> %d done\n", p->pid);
   return p;
 }
 
@@ -155,6 +182,47 @@ found:
 static void
 freeproc(struct proc *p)
 {
+  printf("<freeproc> %d\n", p->pid);
+  // dequeue from mlfq
+  // search for current process in mlfq
+  // update mlfq
+  struct proc* current;
+  struct proc* next;
+
+
+
+  printf("mlfq[LEVELS-1]: ");
+  for (struct proc* c=mlfq[LEVELS-1]; c!=0; c=c->next) {
+    printf("%d->", c->pid);
+  }
+  printf("\n");
+
+
+  for (int i=LEVELS-1; i>=0; i--) {
+    if (!mlfq[i]) continue;
+    current = mlfq[i];
+    next = current->next;
+    if (current->pid == p->pid) {
+      mlfq[i] = current->next; // deque; doesn't care about NULL
+      current->next = 0; // reset p
+      break;
+    }
+    while (1) {
+      if (!next) break; // if next is NULL -> break
+      if (next->pid == p->pid) {
+        current->next = next->next;
+        next->next = 0;
+        break;
+      }
+      current =  current->next;
+      next =  next->next;
+    }
+  }
+
+
+
+
+
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
@@ -452,7 +520,34 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
-    for(p = proc; p < &proc[NPROC]; p++) {
+//    for(p = proc; p < &proc[NPROC]; p++) {
+//      acquire(&p->lock);
+//      if(p->state == RUNNABLE) {
+//        // Switch to chosen process.  It is the process's job
+//        // to release its lock and then reacquire it
+//        // before jumping back to us.
+//        p->state = RUNNING;
+//        c->proc = p;
+//        swtch(&c->context, &p->context);
+//
+//        // Process is done running for now.
+//        // It should have changed its p->state before coming back.
+//        c->proc = 0;
+//      }
+//      release(&p->lock);
+//    }
+
+    // mlfq strategy
+    // search mlfq from Q3->Q2->Q1->Q0
+    // finds 1 process to run
+    // after finding one, break
+    // so that the searching can start from the top again
+//    if (mlfq[3]->pid == 3) printf("<schedule> %d\n", mlfq[3]->pid);
+
+    for(int i=LEVELS-1; i>=0; i--) {
+      if (!mlfq[i]) continue; // if queue is NULL -> move on to the next level
+      p = mlfq[i]; // found a process to run
+
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
@@ -467,7 +562,34 @@ scheduler(void)
         c->proc = 0;
       }
       release(&p->lock);
-    }
+//      printf("mlfq %d\n",mlfq[i]->pid);
+
+      if (p->pid == 3) printf("mlfq %d\n",mlfq[i]->pid);
+
+      // move queue to botttom
+      if (!(p->next)) { // p is the only element in queue
+        break;
+      }
+      else {
+        // p is not the only element in queue
+        mlfq[i] = p->next;
+        struct proc* p_curr = p;
+        while (1) {
+          if (p_curr->next == 0) { // p_curr is the last element
+            p_curr->next = p; // p is the last element
+            p->next = 0; // reset p
+            break;
+          }
+          p_curr = p_curr->next;
+        }
+        if (p->pid == 3) printf("mlfq %d\n",mlfq[i]->pid);
+        break;
+      }
+
+    } // int i=LEVELS-1; i>=0; i--
+
+
+
   }
 }
 
