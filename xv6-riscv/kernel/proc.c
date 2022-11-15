@@ -11,6 +11,7 @@ struct cpu cpus[NCPU];
 struct proc proc[NPROC];
 
 struct proc* mlfq[LEVELS];
+struct proc* current_proc;
 
 struct proc *initproc;
 
@@ -131,9 +132,6 @@ found:
   // put the new process at the front of the queue
   struct proc* temp = mlfq[LEVELS-1];
   if (temp) { // if not empty
-//    mlfq[LEVELS-1] = p;
-//    p->next = temp;
-
     // at the last of queue
     struct proc* pp=mlfq[LEVELS-1];
     while (pp->next != 0) {
@@ -144,12 +142,16 @@ found:
   else {
     mlfq[LEVELS-1] = p;
   }
+  p->level = 3;
+  p->allowance = 1;
   printf("<allocproc> %d\n", p->pid);
   printf("mlfq[LEVELS-1]: ");
   for (struct proc* c=mlfq[LEVELS-1]; c!=0; c=c->next) {
     printf("%d->", c->pid);
   }
   printf("\n");
+
+
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -191,8 +193,23 @@ freeproc(struct proc *p)
 
 
 
-  printf("mlfq[LEVELS-1]: ");
-  for (struct proc* c=mlfq[LEVELS-1]; c!=0; c=c->next) {
+  printf("mlfq[3]: ");
+  for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+    printf("%d->", c->pid);
+  }
+  printf("\n");
+  printf("mlfq[2]: ");
+  for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
+    printf("%d->", c->pid);
+  }
+  printf("\n");
+  printf("mlfq[1]: ");
+  for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
+    printf("%d->", c->pid);
+  }
+  printf("\n");
+  printf("mlfq[0]: ");
+  for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
     printf("%d->", c->pid);
   }
   printf("\n");
@@ -547,6 +564,7 @@ scheduler(void)
     for(int i=LEVELS-1; i>=0; i--) {
       if (!mlfq[i]) continue; // if queue is NULL -> move on to the next level
       p = mlfq[i]; // found a process to run
+      current_proc = p;
 
       acquire(&p->lock);
       if(p->state == RUNNABLE) {
@@ -564,7 +582,6 @@ scheduler(void)
       release(&p->lock);
 //      printf("mlfq %d\n",mlfq[i]->pid);
 
-      if (p->pid == 3) printf("mlfq %d\n",mlfq[i]->pid);
 
       // move queue to botttom
       if (!(p->next)) { // p is the only element in queue
@@ -582,7 +599,6 @@ scheduler(void)
           }
           p_curr = p_curr->next;
         }
-        if (p->pid == 3) printf("mlfq %d\n",mlfq[i]->pid);
         break;
       }
 
@@ -622,9 +638,78 @@ sched(void)
 
 // Give up the CPU for one scheduling round.
 void
-yield(void)
+yield(void) // called every timer interrupt (per tick)
 {
   struct proc *p = myproc();
+  printf("<yield> (pid) %d\n", p->pid);
+
+      printf("\n");
+      printf("mlfq[3]: ");
+      for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+        printf("%d->", c->pid);
+      }
+      printf("\n");
+      printf("mlfq[2]: ");
+      for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
+        printf("%d->", c->pid);
+      }
+      printf("\n");
+      printf("mlfq[1]: ");
+      for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
+        printf("%d->", c->pid);
+      }
+      printf("\n");
+      printf("mlfq[0]: ");
+      for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
+        printf("%d->", c->pid);
+      }
+      printf("\n");
+
+  //mlfq
+  // used up whole time slice
+  if (p == current_proc) {
+    p->allowance -= 1;
+    // used up whole allowance
+    if (p->allowance == 0) {
+      p->level -= 1;
+      if (p->level == 2) p->allowance = 10;
+      else if (p->level == 1) p->allowance = 30;
+      else if (p->level == 0) p->allowance = 10000; // is never used up
+
+      // move queue level
+      // lower level: (last proc)->next = p
+      struct proc* pp = mlfq[p->level];
+      if (!pp) mlfq[p->level] = p; // the lower level is empty
+      else {
+        for (; pp!=0; pp=pp->next) {
+          if (!pp->next) { // pp_next is last element
+            pp->next = p;
+          }
+        }
+      }
+      // upper level: pop p
+      if (mlfq[p->level + 1] == p) mlfq[p->level + 1] = p->next; // p was the 1st element
+      else { // p was not the 1st element, there was some other nodes in front
+        pp = mlfq[p->level + 1];
+        for (; pp!=0; pp=pp->next) {
+          if (pp->next == p) {
+            pp->next = p->next;
+          }
+        }
+      }
+      p->next = 0;
+
+
+    }
+  }
+  printf("\n");
+  printf("<yield>\n");
+  printf("(pid) %d | (ticks) %d\n", p->pid, ticks);
+  printf("c: %d", current_proc->pid);
+  printf("\n");
+
+
+
   acquire(&p->lock);
   p->state = RUNNABLE;
   sched();

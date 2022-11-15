@@ -106,4 +106,6 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   struct proc* next;                  // next proc pointer in mlfq
+  int allowance;
+  int level;
 };
