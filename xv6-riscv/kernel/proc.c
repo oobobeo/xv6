@@ -11,7 +11,11 @@ struct cpu cpus[NCPU];
 struct proc proc[NPROC];
 
 struct proc* mlfq[LEVELS];
-struct proc* current_proc;
+//struct proc* current_proc;
+struct proc* first_proc; // proc that starts with the time slice
+//int sched_reset = 0;
+int first_proc_flag = 0;
+int demote_flag = 0;
 
 struct proc *initproc;
 
@@ -129,27 +133,22 @@ found:
   p->state = USED;
 
   // mlfq
-  // put the new process at the front of the queue
+  // put the new process at the END of the queue
+//  printf("\n<allocproc> %d\n", p->pid);
   struct proc* temp = mlfq[LEVELS-1];
   if (temp) { // if not empty
     // at the last of queue
-    struct proc* pp=mlfq[LEVELS-1];
-    while (pp->next != 0) {
-      pp = pp->next;
+    while (temp->next != 0) {
+      temp = temp->next;
     } // pp: last in queue
-    pp->next = p;
+    temp->next = p;
   }
   else {
     mlfq[LEVELS-1] = p;
   }
+  p->next = 0;
   p->level = 3;
   p->allowance = 1;
-  printf("<allocproc> %d\n", p->pid);
-  printf("mlfq[LEVELS-1]: ");
-  for (struct proc* c=mlfq[LEVELS-1]; c!=0; c=c->next) {
-    printf("%d->", c->pid);
-  }
-  printf("\n");
 
 
 
@@ -174,7 +173,13 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
-  printf("<allocproc> %d done\n", p->pid);
+//  printf("mlfq[3]: ");
+//  for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+//    printf("%d(%d)->", c->pid, c->state);
+//  }
+//  printf("\n");
+//  printf("<allocproc> %d done\n", p->pid);
+//  printf("\n");
   return p;
 }
 
@@ -184,57 +189,55 @@ found:
 static void
 freeproc(struct proc *p)
 {
-  printf("<freeproc> %d\n", p->pid);
+//  printf("\n<freeproc> %d\n", p->pid);
   // dequeue from mlfq
   // search for current process in mlfq
   // update mlfq
-  struct proc* current;
-  struct proc* next;
+//  struct proc* current;
+//  struct proc* next;
 
-
-
-  printf("mlfq[3]: ");
-  for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
-    printf("%d->", c->pid);
+  struct proc* pp = mlfq[p->level];
+  if (pp == p) { // p was the first element
+    mlfq[p->level] = p->next;
   }
-  printf("\n");
-  printf("mlfq[2]: ");
-  for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
-    printf("%d->", c->pid);
-  }
-  printf("\n");
-  printf("mlfq[1]: ");
-  for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
-    printf("%d->", c->pid);
-  }
-  printf("\n");
-  printf("mlfq[0]: ");
-  for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
-    printf("%d->", c->pid);
-  }
-  printf("\n");
-
-
-  for (int i=LEVELS-1; i>=0; i--) {
-    if (!mlfq[i]) continue;
-    current = mlfq[i];
-    next = current->next;
-    if (current->pid == p->pid) {
-      mlfq[i] = current->next; // deque; doesn't care about NULL
-      current->next = 0; // reset p
-      break;
-    }
+  else { // p was NOT the fist element
     while (1) {
-      if (!next) break; // if next is NULL -> break
-      if (next->pid == p->pid) {
-        current->next = next->next;
-        next->next = 0;
+      if (pp->next == p) {
+        pp->next = p->next;
         break;
       }
-      current =  current->next;
-      next =  next->next;
+      pp = pp->next;
     }
   }
+
+  // reset p
+  p->next = 0;
+  p->level = -1;
+  p->allowance = -1;
+
+//  printf("mlfq[3]: ");
+//  for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("mlfq[2]: ");
+//  for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("mlfq[1]: ");
+//  for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("mlfq[0]: ");
+//  for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("\n");
+
+
 
 
 
@@ -537,76 +540,222 @@ scheduler(void)
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
-//    for(p = proc; p < &proc[NPROC]; p++) {
-//      acquire(&p->lock);
-//      if(p->state == RUNNABLE) {
-//        // Switch to chosen process.  It is the process's job
-//        // to release its lock and then reacquire it
-//        // before jumping back to us.
-//        p->state = RUNNING;
-//        c->proc = p;
-//        swtch(&c->context, &p->context);
-//
-//        // Process is done running for now.
-//        // It should have changed its p->state before coming back.
-//        c->proc = 0;
-//      }
-//      release(&p->lock);
-//    }
-
     // mlfq strategy
     // search mlfq from Q3->Q2->Q1->Q0
     // finds 1 process to run
     // after finding one, break
     // so that the searching can start from the top again
-//    if (mlfq[3]->pid == 3) printf("<schedule> %d\n", mlfq[3]->pid);
+    // if selected proc is not in TOP queue, start search again from TOP
 
+
+    // SELECT p in whole MLFQ
+SEARCH:
+//    printf("\n<SEARCH>\n");
+    int proc_found_flag = 0;
     for(int i=LEVELS-1; i>=0; i--) {
-      if (!mlfq[i]) continue; // if queue is NULL -> move on to the next level
-      p = mlfq[i]; // found a process to run
-      current_proc = p;
-
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
-
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
+//      printf("i: %d\n", i);
+      p = mlfq[i];
+      if (!p) { // this level is empty
+//        printf("1\n");
+        if (i>=1) {
+//          printf("next level\n");
+          continue; // go to next level
+        }
+        else { // level = 0
+//          printf("NOTHING TO RUN\n");
+          goto SEARCH;
+        }
       }
-      release(&p->lock);
-//      printf("mlfq %d\n",mlfq[i]->pid);
+      else { // procs in level
+//        printf("a\n");
+        for (; p!=0; p=p->next) {
+//          printf("pid: %d | state: %d\n", p->pid, p->state);
+          if (p->state == RUNNABLE) {
+            proc_found_flag = 1;
+            if (first_proc_flag == 0) { // if first_proc is not recorded, this must be the first_proc
+              first_proc_flag = 1;
+              first_proc = p;
+            }
+            break; // RUNNABLE proc found
+          }
+        }
+        if (proc_found_flag) {
+
+          // DEBUG
+          if (p->pid != 1 && p->pid != 2) {
+            printf("mlfq[3]: ");
+            for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+              printf("%d(%d)->", c->pid, c->state);
+            }
+            printf("\n");
+            printf("mlfq[2]: ");
+            for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
+              printf("%d(%d)->", c->pid, c->state);
+            }
+            printf("\n");
+            printf("mlfq[1]: ");
+            for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
+              printf("%d(%d)->", c->pid, c->state);
+            }
+            printf("\n");
+            printf("mlfq[0]: ");
+            for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
+              printf("%d(%d)->", c->pid, c->state);
+            }
+            printf("\n");
+
+          }
+
+          break;
+        }
+
+      }
+    }
 
 
-      // move queue to botttom
-      if (!(p->next)) { // p is the only element in queue
-        break;
+//    printf("<RUN>: %d\n", p->pid);
+    // RUN p
+    // print every state
+//    if (p->pid != 1 && p->pid != 2) printf("BEFORE RUN\n");
+//    if (p->pid != 1 && p->pid != 2) {
+//      printf("mlfq[3]: ");
+//      for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+//        printf("%d(%d)->", c->pid, c->state);
+//      }
+//      printf("\n");
+//      printf("mlfq[2]: ");
+//      for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
+//        printf("%d(%d)->", c->pid, c->state);
+//      }
+//      printf("\n");
+//      printf("mlfq[1]: ");
+//      for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
+//        printf("%d(%d)->", c->pid, c->state);
+//      }
+//      printf("\n");
+//      printf("mlfq[0]: ");
+//      for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
+//        printf("%d(%d)->", c->pid, c->state);
+//      }
+//      printf("\n");
+//    }
+//    if (p->pid != 1 && p->pid != 2) printf("%d RUN | state: %d\n", p->pid, p->state);
+    acquire(&p->lock);
+    if(p->state == RUNNABLE) {
+      // Switch to chosen process.  It is the process's job
+      // to release its lock and then reacquire it
+      // before jumping back to us.
+      p->state = RUNNING;
+      c->proc = p;
+      swtch(&c->context, &p->context);
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      c->proc = 0;
+    }
+    release(&p->lock);
+//    if (p->pid != 1 && p->pid != 2) printf("\n%d RUN DONE | state: %d\n", p->pid, p->state);
+//
+//    // print every state
+//    if (p->pid != 1 && p->pid != 2) {
+//      printf("mlfq[3]: ");
+//      for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+//        printf("%d(%d)->", c->pid, c->state);
+//      }
+//      printf("\n");
+//      printf("mlfq[2]: ");
+//      for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
+//        printf("%d(%d)->", c->pid, c->state);
+//      }
+//      printf("\n");
+//      printf("mlfq[1]: ");
+//      for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
+//        printf("%d(%d)->", c->pid, c->state);
+//      }
+//      printf("\n");
+//      printf("mlfq[0]: ");
+//      for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
+//        printf("%d(%d)->", c->pid, c->state);
+//      }
+//      printf("\n");
+//    }
+//    if (p->pid != 1 && p->pid != 2) printf("---------\n");
+
+
+
+
+    // INIT DEBUG
+//    struct proc* init_temp = mlfq[3];
+//    int init_flag = 0;
+//    while (1) {
+//      if (init_temp->pid == 1) {
+//        init_flag = 1;
+//        break;
+//      }
+//      init_temp = init_temp->next;
+//      if (init_temp == 0) break;
+//    }
+//    if (init_flag == 0) {
+//      printf("<INIT DISAPPEARED>\n");
+//      printf("mlfq[3]: \n");
+//      for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+//        printf("%d(%d)->", c->pid, c->state);
+//      }
+//      printf("\n");
+//      exit(1);
+//    }
+
+
+
+    // PUT p to BACK OF QUEUE
+    // if (demoted in yield()) -> back of demoted level queue
+    // [scheduler() -> swtch() -> (running in cpu) -> yield() -> HERE]
+    // p has to be RUNNABLE (not freeproc()'ed)
+//    printf("\n%d | %d\n",p->pid,p->state);
+//    if (p->state == RUNNABLE) {
+//      printf("hi");
+      if (demote_flag) { // mlfq handled at yield
+        demote_flag = 0;
+        goto SEARCH;
       }
       else {
-        // p is not the only element in queue
-        mlfq[i] = p->next;
-        struct proc* p_curr = p;
-        while (1) {
-          if (p_curr->next == 0) { // p_curr is the last element
-            p_curr->next = p; // p is the last element
-            p->next = 0; // reset p
-            break;
-          }
-          p_curr = p_curr->next;
+        if (p->next == 0) { // p is the last element
+          goto SEARCH;
         }
-        break;
+        else { // p is NOT the last element
+          struct proc* temp = mlfq[p->level];
+          if (temp == p) { // p is the first element
+            mlfq[p->level] = p->next;
+          }
+          else { // p is NOT the first element
+            // (p's preceeding node) -> (p->next)
+            temp = mlfq[p->level];
+            while (1) {
+              if (temp->next == p) {
+                temp->next = p->next;
+                break;
+              }
+              temp = temp->next;
+            }
+          }
+
+          temp=p->next;
+          while (1) {
+            if (temp->next == 0) {
+              temp->next = p;
+              break;
+            }
+            temp = temp->next;
+          }
+
+          p->next = 0;
+        }
+
       }
-
-    } // int i=LEVELS-1; i>=0; i--
-
+//    }
 
 
-  }
+  } // for (;;)
+
 }
 
 // Switch to scheduler.  Must hold only p->lock
@@ -641,72 +790,101 @@ void
 yield(void) // called every timer interrupt (per tick)
 {
   struct proc *p = myproc();
-  printf("<yield> (pid) %d\n", p->pid);
-
-      printf("\n");
-      printf("mlfq[3]: ");
-      for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
-        printf("%d->", c->pid);
-      }
-      printf("\n");
-      printf("mlfq[2]: ");
-      for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
-        printf("%d->", c->pid);
-      }
-      printf("\n");
-      printf("mlfq[1]: ");
-      for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
-        printf("%d->", c->pid);
-      }
-      printf("\n");
-      printf("mlfq[0]: ");
-      for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
-        printf("%d->", c->pid);
-      }
-      printf("\n");
+//  printf("\n");
+//  printf("<yield> (pid) %d | (ticks) %d\n", p->pid, ticks);
+//  printf("first_proc: %d | p: %d\n", first_proc->pid, p->pid);
+//  printf("mlfq[3]: ");
+//  for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("mlfq[2]: ");
+//  for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("mlfq[1]: ");
+//  for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("mlfq[0]: ");
+//  for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
 
   //mlfq
   // used up whole time slice
-  if (p == current_proc) {
+  if (p == first_proc) {
     p->allowance -= 1;
+//    printf("> whole time slice used | allowance: %d\n", p->allowance);
     // used up whole allowance
-    if (p->allowance == 0) {
+    if (p->allowance == 0 && p->level != 0) {
+      demote_flag = 1; // handled at scheduler
       p->level -= 1;
       if (p->level == 2) p->allowance = 10;
       else if (p->level == 1) p->allowance = 30;
       else if (p->level == 0) p->allowance = 10000; // is never used up
+
 
       // move queue level
       // lower level: (last proc)->next = p
       struct proc* pp = mlfq[p->level];
       if (!pp) mlfq[p->level] = p; // the lower level is empty
       else {
-        for (; pp!=0; pp=pp->next) {
-          if (!pp->next) { // pp_next is last element
+        while (1) {
+          if (pp->next == 0) {
             pp->next = p;
+            break;
           }
+          pp = pp->next;
         }
       }
+//      printf("2\n");
+
+
       // upper level: pop p
       if (mlfq[p->level + 1] == p) mlfq[p->level + 1] = p->next; // p was the 1st element
       else { // p was not the 1st element, there was some other nodes in front
+//        printf("3\n");
         pp = mlfq[p->level + 1];
         for (; pp!=0; pp=pp->next) {
           if (pp->next == p) {
             pp->next = p->next;
+            break;
           }
         }
       }
       p->next = 0;
-
-
     }
   }
-  printf("\n");
-  printf("<yield>\n");
-  printf("(pid) %d | (ticks) %d\n", p->pid, ticks);
-  printf("c: %d", current_proc->pid);
-  printf("\n");
+//  sched_reset = 1;
+//  printf("first_proc_flag = 0\n");
+  first_proc_flag = 0;
+
+//  printf("mlfq[3]: ");
+//  for (struct proc* c=mlfq[3]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("mlfq[2]: ");
+//  for (struct proc* c=mlfq[2]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("mlfq[1]: ");
+//  for (struct proc* c=mlfq[1]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("mlfq[0]: ");
+//  for (struct proc* c=mlfq[0]; c!=0; c=c->next) {
+//    printf("%d->", c->pid);
+//  }
+//  printf("\n");
+//  printf("\n");
+
 
 
 
