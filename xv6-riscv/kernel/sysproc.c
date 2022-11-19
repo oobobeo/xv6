@@ -107,8 +107,6 @@ sys_mlfq(void)
     printf("\t* Q2 = %d times\n", q2_num);
     printf("\t* Q1 = %d times\n", q1_num);
     printf("\t* Q0 = %d times\n", q0_num);
-
-
   }
   else if (arg0 == 1) { // RESET
     boost_num = 0;
@@ -116,14 +114,7 @@ sys_mlfq(void)
     q2_num = 0;
     q1_num = 0;
     q0_num = 0;
-
-
   }
-
-
-
-
-
 
   return 0;
 }
