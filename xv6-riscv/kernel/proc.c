@@ -898,6 +898,42 @@ yield(void) // called every timer interrupt (per tick)
 
 
 
+  // BOOSTING
+  if (next_boost == -1) { // first yield() called
+    next_boost = ticks + 100;
+  }
+  if (ticks >= next_boost) { // BOOST
+    printf("<BOOST>\n");
+    struct proc* pb = mlfq[3]; // last proc in mlfq[3]. could be NULL
+    for (int i=2; i>=0; i--) { // for 2,1,0 level only
+      while (pb) {
+        if (pb->next == 0) {
+          break;
+        }
+        pb = pb->next;
+      }
+      if (mlfq[i]) { // proc present at this level
+        if (pb) { // proc present at TOP queue
+          pb->next = mlfq[i];
+        }
+        else { // proc NOT present at TOP queue
+          mlfq[3] = pb;
+        }
+      }
+    }
+    mlfq[2] = 0;
+    mlfq[1] = 0;
+    mlfq[0] = 0;
+
+    // update mlfq data for boosted procs
+    for (pb=mlfq[3]; pb!=0; pb=pb->next) {
+      pb->level = 3;
+      pb->allowance = 1;
+    }
+
+    next_boost = ticks + 100;
+  }
+
 
   acquire(&p->lock);
   p->state = RUNNABLE;
