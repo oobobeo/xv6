@@ -18,6 +18,15 @@ int first_proc_flag = 0;
 int demote_flag = 0;
 int next_boost = -1;
 
+  // if init is created, init mlfq syscall vars
+  int boost_num = 0;
+  int q3_num = 0;
+  int q2_num = 0;
+  int q1_num = 0;
+  int q0_num = 0;
+
+
+
 struct proc *initproc;
 
 int nextpid = 1;
@@ -577,6 +586,12 @@ SEARCH:
 
       if (!p && i==0) goto SEARCH; // no RUNNABLE proc in whole mlfq. ex) file io
       if (proc_found_flag) {
+        if (p->level == 3) q3_num += 1;
+        if (p->level == 2) q2_num += 1;
+        if (p->level == 1) q1_num += 1;
+        if (p->level == 0) q0_num += 1;
+        printf("\n\n%d %d %d %d\n\n", q3_num, q2_num, q1_num, q0_num);
+
         break;
       }
 
@@ -904,6 +919,7 @@ yield(void) // called every timer interrupt (per tick)
   }
   if (ticks >= next_boost) { // BOOST
     printf("<BOOST>\n");
+    boost_num += 1;
     struct proc* pb = mlfq[3]; // last proc in mlfq[3]. could be NULL
     for (int i=2; i>=0; i--) { // for 2,1,0 level only
       while (pb) {

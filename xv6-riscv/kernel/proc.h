@@ -109,3 +109,10 @@ struct proc {
   int allowance;
   int level;
 };
+
+// mlfq sys_call vars
+extern int boost_num;
+extern int q3_num;
+extern int q2_num;
+extern int q1_num;
+extern int q0_num;
