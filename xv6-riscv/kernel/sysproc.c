@@ -89,32 +89,3 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
-
-// MLFQ stats
-uint64
-sys_mlfq(void)
-{
-  /* Assignment 4: Scheduling
-     Print MLFQ scheduling stats if the input argument is 0.
-     Reset MLFQ counter values to zeros if the input argument is 1. */
-  int arg0, arg1;
-  argint(0, &arg0);
-  argint(1, &arg1);
-  if (arg0 == 0) { // STATS
-    printf("# of priority boosting: %d times\n", boost_num);
-    printf("# of process scheduling\n");
-    printf("\t* Q3 = %d times\n", q3_num);
-    printf("\t* Q2 = %d times\n", q2_num);
-    printf("\t* Q1 = %d times\n", q1_num);
-    printf("\t* Q0 = %d times\n", q0_num);
-  }
-  else if (arg0 == 1) { // RESET
-    boost_num = 0;
-    q3_num = 0;
-    q2_num = 0;
-    q1_num = 0;
-    q0_num = 0;
-  }
-
-  return 0;
-}

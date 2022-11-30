@@ -2223,6 +2223,7 @@ sbrkfail(char *s)
     int n = 0;
     for (i = 0; i < 10*BIG; i += PGSIZE) {
       n += *(a+i);
+      *(a+i) = 0; // write to induce a page fault.
     }
     // print n so the compiler doesn't optimize away
     // the for loop.
@@ -2580,6 +2581,7 @@ struct test {
   {copyinstr1, "copyinstr1"},
   {copyinstr2, "copyinstr2"},
   {copyinstr3, "copyinstr3"},
+  {sbrkfail, "sbrkfail"},
   {rwsbrk, "rwsbrk" },
   {truncate1, "truncate1"},
   {truncate2, "truncate2"},
@@ -2622,7 +2624,6 @@ struct test {
   {sbrkmuch, "sbrkmuch"},
   {kernmem, "kernmem"},
   {MAXVAplus, "MAXVAplus"},
-  {sbrkfail, "sbrkfail"},
   {sbrkarg, "sbrkarg"},
   {validatetest, "validatetest"},
   {bsstest, "bsstest"},
