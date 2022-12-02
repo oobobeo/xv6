@@ -257,19 +257,25 @@ userinit(void)
 // Grow or shrink user memory by n bytes.
 // Return 0 on success, -1 on failure.
 int
-growproc(int n)
+growproc(int n) // (n >= 4096*12)
 {
   uint64 sz;
   struct proc *p = myproc();
 
   sz = p->sz;
+
+  // allocate
   if(n > 0){
+    // add PTE's & physical mem
     if((sz = uvmalloc(p->pagetable, sz, sz + n, PTE_W)) == 0) {
       return -1;
     }
+  // deallocate
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
+
+  // new sz
   p->sz = sz;
   return 0;
 }

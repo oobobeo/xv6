@@ -148,7 +148,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   if(size == 0)
     panic("mappages: size");
   
-  a = PGROUNDDOWN(va);
+  a = PGROUNDDOWN(va); // (= N*4096) [adjusted DOWN to be a multiple of PGSIZE]
   last = PGROUNDDOWN(va + size - 1);
   for(;;){
     if((pte = walk(pagetable, a, 1)) == 0)
@@ -231,14 +231,23 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
   if(newsz < oldsz)
     return oldsz;
 
-  oldsz = PGROUNDUP(oldsz);
+  oldsz = PGROUNDUP(oldsz); // (= N*4096) [adjusted UP to be a multiple of PGSIZE]
+
   for(a = oldsz; a < newsz; a += PGSIZE){
+
+    // get (4096)PGSIZE Byte physical mem
     mem = kalloc();
+
+    // kalloc() failed
     if(mem == 0){
       uvmdealloc(pagetable, a, oldsz);
       return 0;
     }
+
+    // init physical mem to 0
     memset(mem, 0, PGSIZE);
+
+    // add PTE
     if(mappages(pagetable, a, PGSIZE, (uint64)mem, PTE_R|PTE_U|xperm) != 0){
       kfree(mem);
       uvmdealloc(pagetable, a, oldsz);

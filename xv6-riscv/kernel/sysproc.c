@@ -18,12 +18,14 @@ sys_exit(void)
 uint64
 sys_getpid(void)
 {
+
   return myproc()->pid;
 }
 
 uint64
 sys_fork(void)
 {
+
   return fork();
 }
 
@@ -35,6 +37,8 @@ sys_wait(void)
   return wait(p);
 }
 
+
+// growproc() and return [addr of new heap block]
 uint64
 sys_sbrk(void)
 {
