@@ -71,28 +71,31 @@ usertrap(void)
     // if store_page_fault && pa = zero_frame
     pte_t *pte;
     uint64 pa;
-    uint64 va = PGROUNDDOWN(r_stval());
+    uint64 va = PGROUNDDOWN(r_stval()); // round down with regards to PGSIZE
+    if (va >= p->sz || va >= MAXVA) goto UNEXP;
 
     pte = walk(p->pagetable, va, 1);
     pa = PTE2PA(*pte);
     if (pa == (uint64)zero_frame) {
 
       // va is out of bounds
-      if (va >= p->sz || va >= MAXVA) {
-        printf("<usertrap> outofbounds+\n");
-        goto UNEXP;
-      }
+//      printf("<usertrap> va: %p, MAXVA: %p\n", va, MAXVA);
+//      if (va >= p->sz) {
+////        printf("<usertrap> outofbounds+\n");
+//        goto UNEXP;
+//      }
 
-      printf("<usertrap> 0xf & zero_frame\n");
-      printf("\tpte:%p pa:%p va:%p sz:%p \n", *pte, pa, va, p->sz);
+//      printf("<usertrap> 0xf & zero_frame\n");
+//      printf("\tpte:%p pa:%p va:%p sz:%p \n", *pte, pa, va, p->sz);
       // kalloc() -> mappages()
       char* mem;
       mem = kalloc();
 
-      // kalloc() failed
+      // kalloc() failed -> orig malloc() returns 0
       if(mem == 0){
 //        uvmdealloc(pagetable, a, oldsz); // rollback sz
-        panic("usertrap(): kalloc() failed");
+//        panic("usertrap(): kalloc() failed");
+        goto UNEXP;
       }
 
       // init physical mem to 0
@@ -100,14 +103,14 @@ usertrap(void)
 
 
       // update PTE
-      printf("<usertrap> mappages()\n");
+//      printf("<usertrap> mappages()\n");
       if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_R|PTE_U|PTE_W) != 0){
 //        kfree(mem);
 //        uvmdealloc(p->pagetable, r_stval(), oldsz);
 //        return 0;
         panic("usertrap(): mappages() failed");
       }
-      printf("<usertrap> pte:%p pa:%p va:%p\n", pte, mem, va);
+//      printf("<usertrap> pte:%p pa:%p va:%p\n", pte, mem, va);
 //      usertrapret();
     }
     else goto UNEXP;
@@ -118,6 +121,7 @@ UNEXP:
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     setkilled(p);
   }
+//RET:
 
   if(killed(p))
     exit(-1);

@@ -72,7 +72,7 @@ morecore(uint nu)
 void*
 malloc(uint nbytes) // nbytes: num of Bytes
 {
-  printf("<malloc> %d\n", nbytes);
+//  printf("<malloc> %d\n", nbytes);
   Header *p, *prevp;
   uint nunits;
 
