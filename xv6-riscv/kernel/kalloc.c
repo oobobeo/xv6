@@ -23,11 +23,31 @@ struct {
   struct run *freelist;
 } kmem;
 
+void* zero_frame; // pointer for 1 Byte
+
+void set_zero_frame() {
+
+  struct run *r;
+
+  acquire(&kmem.lock);
+  r = kmem.freelist;
+  if(r)
+    kmem.freelist = r->next;
+  release(&kmem.lock);
+
+  if(r)
+    memset((char*)r, 0, PGSIZE); // 0 pad
+  printf("<set_zero_frame> zero_frame: %p\n", r);
+  zero_frame = (void*)r;
+}
+
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
   freerange(end, (void*)PHYSTOP);
+  // init zero_frame
+  set_zero_frame();
 }
 
 void

@@ -189,6 +189,7 @@ proc_pagetable(struct proc *p)
   // to/from user space, so not PTE_U.
   if(mappages(pagetable, TRAMPOLINE, PGSIZE,
               (uint64)trampoline, PTE_R | PTE_X) < 0){
+    printf("<proc_pagetable 1>\n");
     uvmfree(pagetable, 0);
     return 0;
   }
@@ -198,6 +199,7 @@ proc_pagetable(struct proc *p)
   if(mappages(pagetable, TRAPFRAME, PGSIZE,
               (uint64)(p->trapframe), PTE_R | PTE_W) < 0){
     uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+    printf("<proc_pagetable 2>\n");
     uvmfree(pagetable, 0);
     return 0;
   }
@@ -210,6 +212,7 @@ proc_pagetable(struct proc *p)
 void
 proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
+  printf("<proc_freepagetable>\n");
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmfree(pagetable, sz);
@@ -259,6 +262,7 @@ userinit(void)
 int
 growproc(int n) // (n >= 4096*12)
 {
+  printf("<growproc> %d\n", n);
   uint64 sz;
   struct proc *p = myproc();
 
@@ -267,11 +271,18 @@ growproc(int n) // (n >= 4096*12)
   // allocate
   if(n > 0){
     // add PTE's & physical mem
-    if((sz = uvmalloc(p->pagetable, sz, sz + n, PTE_W)) == 0) {
+//    if((sz = uvmalloc(p->pagetable, sz, sz + n, PTE_W)) == 0) {
+//      return -1;
+//    }
+    printf("<growproc> uvmalloc_zf() called\n");
+    // increase sz, add PTE(zero_frame)
+    if((sz = uvmalloc_zf(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
+
   // deallocate
   } else if(n < 0){
+    printf("<growproc> uvmdealloc() called\n");
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
 

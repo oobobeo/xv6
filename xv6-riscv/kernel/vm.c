@@ -153,8 +153,11 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   for(;;){
     if((pte = walk(pagetable, a, 1)) == 0)
       return -1;
-    if(*pte & PTE_V)
-      panic("mappages: remap");
+    if(*pte & PTE_V) {
+      if (walkaddr(pagetable, a) == (uint64)zero_frame)
+        printf("<mappages> a:%p, va:%p, pa:%p, size: %d\n", a, va, pa, size);
+      else panic("mappages: remap");
+    }
     *pte = PA2PTE(pa) | perm | PTE_V;
     if(a == last)
       break;
@@ -170,22 +173,31 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 void
 uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 {
+  printf("<uvmunmap> pagetable:%p va:%p npages:%d do_free:%d\n",pagetable,va,npages,do_free);
   uint64 a;
   pte_t *pte;
 
   if((va % PGSIZE) != 0)
     panic("uvmunmap: not aligned");
 
+//  printf("<uvmunmap> va:%d, npages:%d\n", va, npages);
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
+
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
+
+    printf("uvmunmap| pte:%p pa:%p (v)a:%p \n", pte, walkaddr(pagetable, a), a);
+
+
     if((*pte & PTE_V) == 0)
       panic("uvmunmap: not mapped");
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
+      // dont kfree if pa = zero_frame
       uint64 pa = PTE2PA(*pte);
-      kfree((void*)pa);
+      if ((void*)pa != zero_frame)
+        kfree((void*)pa);
     }
     *pte = 0;
   }
@@ -225,6 +237,7 @@ uvmfirst(pagetable_t pagetable, uchar *src, uint sz)
 uint64
 uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
 {
+  printf("<uvmalloc>\n");
   char *mem;
   uint64 a;
 
@@ -257,6 +270,36 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
   return newsz;
 }
 
+// Allocate PTEs and zero_frame to grow process from oldsz to
+// newsz, which need not be page aligned.  Returns new size or 0 on error.
+uint64
+uvmalloc_zf(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
+{
+  printf("<uvmalloc_zf>\n");
+//  char *mem;
+  uint64 a;
+
+  // err check
+  if(newsz < oldsz)
+    return oldsz;
+
+  oldsz = PGROUNDUP(oldsz); // (= N*4096) [adjusted UP to be a multiple of PGSIZE]
+
+  for(a = oldsz; a < newsz; a += PGSIZE){
+    // zero_frame
+//    mem = zero_frame;
+
+    // add PTE
+    if(mappages(pagetable, a, PGSIZE, (uint64)zero_frame, PTE_R|PTE_U) != 0){
+//      kfree(mem);
+//      uvmdealloc(pagetable, a, oldsz);
+      panic("uvmalloc_zf: mappages() failed");
+      return 0;
+    }
+  }
+  return newsz;
+}
+
 // Deallocate user pages to bring the process size from oldsz to
 // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
 // need to be less than oldsz.  oldsz can be larger than the actual
@@ -264,6 +307,7 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, int xperm)
 uint64
 uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 {
+  printf("<uvmdealloc>\n");
   if(newsz >= oldsz)
     return oldsz;
 
@@ -280,15 +324,18 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 void
 freewalk(pagetable_t pagetable)
 {
+  printf("<freewalk> pagetable:%p\n", (void*)pagetable);
   // there are 2^9 = 512 PTEs in a page table.
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
+    if (pte)  printf("<freewalk loop> pte:%p pa:%p\n", (void*)pte, PTE2PA(pte));
     if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
       // this PTE points to a lower-level page table.
       uint64 child = PTE2PA(pte);
       freewalk((pagetable_t)child);
       pagetable[i] = 0;
-    } else if(pte & PTE_V){
+    } else if(pte & PTE_V) {
+      printf("<freewalk: panic> pte:%p pa:%p\n", (void*)pte, PTE2PA(pte));
       panic("freewalk: leaf");
     }
   }
@@ -300,8 +347,13 @@ freewalk(pagetable_t pagetable)
 void
 uvmfree(pagetable_t pagetable, uint64 sz)
 {
-  if(sz > 0)
+  printf("<uvmfree> pte:%p sz:%d\n", (void*)pagetable, sz);
+  if(sz > 0){
+    printf("<uvmfree> uvmunmap() called\n");
     uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
+//    printf("uvmfree2\n");
+    }
+  printf("<uvmfree> freewalk() called\n");
   freewalk(pagetable);
 }
 

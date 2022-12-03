@@ -67,7 +67,53 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } else if (r_scause() == 0xf) {
+    // if store_page_fault && pa = zero_frame
+    pte_t *pte;
+    uint64 pa;
+    uint64 va = PGROUNDDOWN(r_stval());
+
+    pte = walk(p->pagetable, va, 1);
+    pa = PTE2PA(*pte);
+    if (pa == (uint64)zero_frame) {
+
+      // va is out of bounds
+      if (va >= p->sz || va >= MAXVA) {
+        printf("<usertrap> outofbounds+\n");
+        goto UNEXP;
+      }
+
+      printf("<usertrap> 0xf & zero_frame\n");
+      printf("\tpte:%p pa:%p va:%p sz:%p \n", *pte, pa, va, p->sz);
+      // kalloc() -> mappages()
+      char* mem;
+      mem = kalloc();
+
+      // kalloc() failed
+      if(mem == 0){
+//        uvmdealloc(pagetable, a, oldsz); // rollback sz
+        panic("usertrap(): kalloc() failed");
+      }
+
+      // init physical mem to 0
+      memset(mem, 0, PGSIZE);
+
+
+      // update PTE
+      printf("<usertrap> mappages()\n");
+      if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_R|PTE_U|PTE_W) != 0){
+//        kfree(mem);
+//        uvmdealloc(p->pagetable, r_stval(), oldsz);
+//        return 0;
+        panic("usertrap(): mappages() failed");
+      }
+      printf("<usertrap> pte:%p pa:%p va:%p\n", pte, mem, va);
+//      usertrapret();
+    }
+    else goto UNEXP;
+  }
+  else {
+UNEXP:
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     setkilled(p);
