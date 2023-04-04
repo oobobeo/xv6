@@ -77,16 +77,6 @@ usertrap(void)
     pte = walk(p->pagetable, va, 1);
     pa = PTE2PA(*pte);
     if (pa == (uint64)zero_frame) {
-
-      // va is out of bounds
-//      printf("<usertrap> va: %p, MAXVA: %p\n", va, MAXVA);
-//      if (va >= p->sz) {
-////        printf("<usertrap> outofbounds+\n");
-//        goto UNEXP;
-//      }
-
-//      printf("<usertrap> 0xf & zero_frame\n");
-//      printf("\tpte:%p pa:%p va:%p sz:%p \n", *pte, pa, va, p->sz);
       // kalloc() -> mappages()
       char* mem;
       mem = kalloc();
@@ -103,15 +93,9 @@ usertrap(void)
 
 
       // update PTE
-//      printf("<usertrap> mappages()\n");
       if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_R|PTE_U|PTE_W) != 0){
-//        kfree(mem);
-//        uvmdealloc(p->pagetable, r_stval(), oldsz);
-//        return 0;
         panic("usertrap(): mappages() failed");
       }
-//      printf("<usertrap> pte:%p pa:%p va:%p\n", pte, mem, va);
-//      usertrapret();
     }
     else goto UNEXP;
   }

@@ -197,12 +197,9 @@ struct cmd*
 execcmd(void)
 {
   struct execcmd *cmd;
-//  printf("<cmd> malloc() called\n");
   cmd = malloc(sizeof(*cmd));
-//  printf("<cmd> memset() called\n");
   memset(cmd, 0, sizeof(*cmd));
   cmd->type = EXEC;
-//  printf("<cmd> return\n");
   return (struct cmd*)cmd;
 }
 

@@ -37,7 +37,6 @@ void set_zero_frame() {
 
   if(r)
     memset((char*)r, 0, PGSIZE); // 0 pad
-  printf("<set_zero_frame> zero_frame: %p\n", r);
   zero_frame = (void*)r;
 }
 
